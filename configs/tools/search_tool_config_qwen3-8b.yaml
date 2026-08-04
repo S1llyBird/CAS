@@ -1,0 +1,34 @@
+tools:
+  - class_name: verl.tools.search_tool.SearchTool
+    config:
+      retrieval_service_url: http://127.0.0.1:8000/retrieve
+      topk: 5
+      num_workers: 120
+      rate_limit: 120
+      timeout: 30
+      cp_filter_mode: aps
+      static_cp_enable: false
+      lambda_fixed_path: ${oc.env:CAS_LAMBDA_FIXED_PATH,data/calibration_qwen3-8b/lambda_fixed.json}
+      lambda_fixed: null
+      cp_k_max: 10
+      aps_temperature: 0.01
+      aps_alpha: 0.10
+      aps_q_hat: null
+      aps_min_docs: 2
+      aps_max_docs: 5
+      type: native
+    tool_schema:
+      type: function
+      function:
+        name: search
+        description: Searches the web for relevant information based on the given query.
+        parameters:
+          type: object
+          properties:
+            query_list:
+              type: array
+              item:
+                type: string
+              description: A list of fully-formed semantic queries. The tool will return search results for each query.
+          required:
+            - query_list

@@ -1,0 +1,31 @@
+[project]
+name = "cas"
+version = "0.2.0"
+description = "CAS: Conformalized Agentic Search via Adaptive Retrieval and Policy Weighting."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "verl",
+    "torch>=2.8.0",
+    "flash-attn",
+    "sglang[all]",
+    "wandb",
+    "pip",
+]
+
+[tool.uv.sources]
+verl = { path = "./verl", editable = true }
+torch = [
+  { index = "pytorch-cu129" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu129"
+url = "https://download.pytorch.org/whl/cu129"
+explicit = true
+
+[tool.uv.extra-build-dependencies]
+flash-attn = [{ requirement = "torch", match-runtime = true }]
+
+[tool.uv.extra-build-variables]
+flash-attn = { FLASH_ATTENTION_SKIP_CUDA_BUILD = "TRUE" }
