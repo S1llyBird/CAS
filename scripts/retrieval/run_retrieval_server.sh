@@ -13,9 +13,9 @@ if [[ -z "${GPU_IDS:-}" ]]; then
     else
         status=$?
         if (( status == 2 )); then
-            echo "ERROR: 没有检测到 ${REQUIRED_GPUS} 张空闲 GPU。可手动指定 GPU_IDS，例如 GPU_IDS=0,1,2,3" >&2
+            echo "ERROR: Could not find ${REQUIRED_GPUS} idle GPUs. Set GPU_IDS manually, for example GPU_IDS=0,1,2,3" >&2
         else
-            echo "ERROR: GPU 检测脚本执行失败（exit code: $status）" >&2
+            echo "ERROR: GPU detection script failed (exit code: $status)" >&2
         fi
         exit "$status"
     fi

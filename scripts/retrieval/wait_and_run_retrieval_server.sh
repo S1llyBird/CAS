@@ -7,26 +7,26 @@ REQUIRED_GPUS="${REQUIRED_GPUS:-2}"
 CHECK_INTERVAL_SECONDS="${CHECK_INTERVAL_SECONDS:-30}"
 
 if [[ -n "${GPU_IDS:-}" ]]; then
-    echo "GPU_IDS 已手动指定为 $GPU_IDS，跳过等待。"
+    echo "GPU_IDS was set manually to $GPU_IDS; skipping the wait."
 else
     while true; do
         if GPU_IDS="$(bash "$GPU_HELPER" "$REQUIRED_GPUS")"; then
             export GPU_IDS
-            echo "检测到空闲 GPU: $GPU_IDS"
+            echo "Detected idle GPUs: $GPU_IDS"
             break
         else
             status=$?
             if (( status == 2 )); then
-                echo "等待 ${REQUIRED_GPUS} 张空闲 GPU（每 ${CHECK_INTERVAL_SECONDS}s 检查一次）..."
+                echo "Waiting for ${REQUIRED_GPUS} idle GPUs (checking every ${CHECK_INTERVAL_SECONDS}s)..."
                 sleep "$CHECK_INTERVAL_SECONDS"
                 continue
             fi
 
-            echo "ERROR: GPU 检测脚本执行失败（exit code: $status）" >&2
+            echo "ERROR: GPU detection script failed (exit code: $status)" >&2
             exit "$status"
         fi
     done
 fi
 
-# 用户要求检测到 GPU 后只启动这个脚本。
+# Start the retrieval server as soon as the requested GPUs are available.
 exec bash "$SCRIPT_DIR/run_retrieval_server.sh"

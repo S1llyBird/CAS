@@ -315,7 +315,7 @@ def _extract_query_from_step(step: Any) -> list[str]:
             if isinstance(item, str) and item.strip():
                 query_candidates.append(item.strip())
 
-    # 去重并保持顺序
+    # Deduplicate while preserving order.
     dedup: list[str] = []
     seen = set()
     for q in query_candidates:
@@ -366,13 +366,13 @@ def flatten_query_answer_pairs_from_row(
     teacher_hop_trace_collector: list[dict[str, Any]] | None = None,
 ) -> list[tuple[str, str]]:
     """
-    从单条样本中拍平提取 (query, answer) 对：
-    - 单跳：返回 1 对
-    - 多跳：返回多对（每一跳至少一对）
+    Flatten (query, answer) pairs from one sample:
+    - Single-hop samples return one pair.
+    - Multi-hop samples return multiple pairs, with at least one per hop.
     """
     gt_answers = get_ground_truth_answers(row)
 
-    # 收集所有可能的“轨迹容器”
+    # Collect every possible trajectory container.
     candidates: list[Any] = []
     for field in [
         "search_trajectory",
@@ -399,14 +399,14 @@ def flatten_query_answer_pairs_from_row(
         elif isinstance(blob, list):
             candidates.append(blob)
 
-    # 归一化到 step 列表
+    # Normalize trajectories into a list of steps.
     step_list: list[Any] = []
     for c in candidates:
         c = _maybe_parse_json(c)
         if c is None:
             continue
         if isinstance(c, dict):
-            # dict 可能是单跳 step，也可能是包裹结构
+            # A dictionary may be a single hop or a trajectory wrapper.
             nested = None
             for key in ["steps", "hops", "trajectory", "search_trajectory"]:
                 if key in c:
@@ -456,7 +456,7 @@ def flatten_query_answer_pairs_from_row(
         if llm_pairs:
             return llm_pairs
 
-    # 没有显式轨迹且 LLM 未提供结果时，回退到 (question, gt_answer)
+    # Fall back to (question, gt_answer) when neither a trajectory nor LLM output is available.
     if not flattened_pairs:
         question = get_question_text(row).strip()
         if question:
@@ -578,7 +578,7 @@ def _llm_select_golden_docs_from_retrieval(
     llm_cfg: dict[str, Any],
     pair_meta: dict[str, Any] | None = None,
 ) -> tuple[int, list[int], dict[str, Any]]:
-    """让 teacher-LLM 从检索条目中判断可用于推理出答案的文档。"""
+    """Ask the teacher LLM which retrieved documents support reasoning to the answer."""
     docs_for_llm: list[dict[str, Any]] = []
     for idx, doc_item in enumerate(retrieved_docs):
         score_val = doc_item.get("score", None)
@@ -590,7 +590,7 @@ def _llm_select_golden_docs_from_retrieval(
             {
                 "index": idx,
                 "score": score_val,
-                # 控制单条文本长度，避免 teacher 调用超长
+                # Bound each document to keep teacher requests manageable.
                 "contents": doc_to_text(doc_item)[:4000],
             }
         )
@@ -665,7 +665,7 @@ def contains_any_answer(doc_text: str, answer_list: list[str]) -> bool:
 
 
 def _stable_softmax_with_temperature(scores: np.ndarray, temperature: float) -> np.ndarray:
-    """带温度系数且数值稳定的 softmax。"""
+    """Compute a numerically stable softmax with temperature scaling."""
     safe_temp = max(float(temperature), 1e-8)
     shifted = (scores - float(np.max(scores))) / safe_temp
     exp_scores = np.exp(shifted)
@@ -680,13 +680,14 @@ def calibrate_aps(
     aps_temperature: float = 0.01,
     aps_alpha: float = 0.10,
 ) -> tuple[float, np.ndarray]:
-    """离线 APS 校准，返回 q_hat 与每条样本的非遵循分数 E_i。
+    """Calibrate APS offline and return q_hat and each sample's nonconformity score E_i.
 
-    每个 calibration_item 至少包含：
-    - scores: 检索分数列表（优先认为是正向相似度分数）
-    - golden_index: 黄金文档在原始列表中的索引，若不存在用 -1
-    可选：
-    - scores_are_s_doc: 若为 True，则 scores 代表 s_doc=-retrieval_score，需要取负转回正向分数
+    Each calibration_item must contain:
+    - scores: retrieval scores, interpreted as positive similarity scores by default.
+    - golden_index: index of the golden document in the original list, or -1 when absent.
+    Optional:
+    - scores_are_s_doc: when True, scores are s_doc=-retrieval_score and are negated
+      back into positive similarity scores.
     """
     if not calibration_items:
         raise ValueError("calibration_items is empty; cannot calibrate APS q_hat.")
@@ -703,16 +704,16 @@ def calibrate_aps(
             e_values.append(1.0)
             continue
 
-        # 1) 输入处理：转为正向分数并降序
+        # 1) Convert to positive similarity scores and sort in descending order.
         scores = -raw_scores if scores_are_s_doc else raw_scores.copy()
-        # 若出现负值（例如混入了 s_doc 风格数据），做绝对值兜底转正。
+        # Use absolute values as a safeguard for mixed s_doc-style inputs.
         if np.any(scores < 0):
             scores = np.abs(scores)
 
-        order = np.argsort(-scores)  # 降序
+        order = np.argsort(-scores)  # Descending order.
         sorted_scores = scores[order]
 
-        # 黄金文档不在 top-k 或索引非法，按定义 E_i=1.0
+        # By definition, E_i=1.0 when the golden document is absent or its index is invalid.
         if golden_index < 0 or golden_index >= len(scores):
             e_values.append(1.0)
             continue
@@ -722,10 +723,10 @@ def calibrate_aps(
             continue
         ranked_pos = int(ranked_pos_arr[0])
 
-        # 2) 温度缩放 + softmax（减 max 保证数值稳定）
+        # 2) Apply temperature scaling and a numerically stable softmax.
         probs = _stable_softmax_with_temperature(sorted_scores, temperature=aps_temperature)
 
-        # 3) 非遵循分数 E_i：累计到黄金文档所在位置（包含该文档）
+        # 3) Accumulate probability through the golden document to obtain E_i.
         cum_probs = np.cumsum(probs)
         e_i = float(cum_probs[ranked_pos])
         e_values.append(float(min(1.0, max(0.0, e_i))))
@@ -921,7 +922,7 @@ def run(args) -> CalibrationOutputs:
         if not flattened_pairs:
             raise ValueError("No (query, answer) pairs extracted from calibration trajectories.")
 
-        # 保存 teacher-LLM 的多跳拆分结果，便于人工检查“如何分割多跳问题”
+        # Save teacher-LLM hop decompositions for manual inspection.
         if teacher_hop_trace_records:
             hop_trace_path = os.path.join(args.output_dir, "teacher_llm_hop_decomposition.jsonl")
             _write_jsonl(hop_trace_path, teacher_hop_trace_records)
@@ -944,7 +945,7 @@ def run(args) -> CalibrationOutputs:
             )
             total_docs += len(retrieved)
 
-            # 先筛出分数可用的条目，再做 teacher 判定与 APS 样本构造
+            # Keep entries with valid scores before teacher judging and APS construction.
             valid_docs: list[dict[str, Any]] = []
             valid_scores: list[float] = []
             for doc_item in retrieved:
@@ -993,7 +994,7 @@ def run(args) -> CalibrationOutputs:
                     golden_index = -1
                     golden_indices = []
 
-            # 若 teacher 结果为空，回退到旧逻辑，避免全量样本被置为未命中
+            # Fall back to answer matching when the teacher returns no golden documents.
             if not golden_indices and valid_docs:
                 for local_idx, doc_item in enumerate(valid_docs):
                     doc_text = doc_to_text(doc_item)
@@ -1004,7 +1005,7 @@ def run(args) -> CalibrationOutputs:
 
             for idx in golden_indices:
                 if 0 <= idx < len(valid_scores):
-                    # 兼容旧 static CP 校准（LAMBDA_FIXED）
+                    # Preserve compatibility with legacy static CP calibration (LAMBDA_FIXED).
                     positive_scores.append(-valid_scores[idx])
                     matched_docs += 1
 

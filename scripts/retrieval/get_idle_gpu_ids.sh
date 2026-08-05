@@ -6,12 +6,12 @@ IDLE_MAX_MEMORY_MB="${IDLE_MAX_MEMORY_MB:-500}"
 IDLE_MAX_UTIL_PERCENT="${IDLE_MAX_UTIL_PERCENT:-10}"
 
 if ! [[ "$REQUIRED_GPUS" =~ ^[0-9]+$ ]] || (( REQUIRED_GPUS <= 0 )); then
-    echo "ERROR: REQUIRED_GPUS 必须是正整数，当前值: $REQUIRED_GPUS" >&2
+    echo "ERROR: REQUIRED_GPUS must be a positive integer; current value: $REQUIRED_GPUS" >&2
     exit 1
 fi
 
 if ! command -v nvidia-smi >/dev/null 2>&1; then
-    echo "ERROR: nvidia-smi 不可用，无法检测 GPU 状态" >&2
+    echo "ERROR: nvidia-smi is unavailable; GPU status cannot be detected" >&2
     exit 1
 fi
 
@@ -36,7 +36,7 @@ for row in "${gpu_rows[@]}"; do
 done
 
 if (( ${#idle_gpu_ids[@]} < REQUIRED_GPUS )); then
-    # 约定退出码 2 表示“GPU 数量不足，可重试”。
+    # Exit code 2 means there are not enough idle GPUs and the caller may retry.
     exit 2
 fi
 

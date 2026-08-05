@@ -148,7 +148,7 @@ def is_retrieval_correct(text: str, golden_answers: list[str]) -> list[str]:
 
 
 def _append_reward_debug_trace(record: dict):
-    """记录 reward 侧中间信息（模型输出、抽取答案、格式校验等）。"""
+    """Log reward-side details such as model output, extracted answers, and format checks."""
     trace_dir = os.getenv("CAS_DEBUG_TRACE_DIR", "").strip()
     if not trace_dir:
         return
@@ -159,7 +159,7 @@ def _append_reward_debug_trace(record: dict):
         with open(trace_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(payload, ensure_ascii=False) + "\n")
     except Exception:
-        # 调试日志失败不影响训练主流程
+        # Debug logging failures must not interrupt the training workflow.
         pass
 
 

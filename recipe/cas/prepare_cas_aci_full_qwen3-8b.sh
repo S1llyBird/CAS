@@ -4,30 +4,30 @@ set -x
 
 ulimit -n 65535
 
-# 固定使用 0,1 两张显卡
+# Use GPUs 0 and 1 by default.
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1}"
 
 PROJECT_DIR="$(pwd)"
 DATA_DIR="${PROJECT_DIR}/data"
 
-# 输入数据（原始 RL 训练集）
+# Input data (the original RL training set).
 TRAIN_FILE="${TRAIN_FILE:-${DATA_DIR}/cas_train.parquet}"
 
-# 产物输出目录（独立 Qwen3-8B 目录，避免和 Qwen2.5-3B 冲突）
-# 会生成 calibration_dataset / rl_train_dataset / lambda_fixed / initial_scores
+# Use a dedicated Qwen3-8B output directory to avoid conflicts with Qwen2.5-3B.
+# Produces calibration_dataset, rl_train_dataset, lambda_fixed, and initial_scores.
 OUTPUT_DIR="${OUTPUT_DIR:-${DATA_DIR}/calibration_qwen3-8b}"
 
-# 检索服务配置
+# Retrieval service configuration.
 RETRIEVAL_SERVICE_URL="${RETRIEVAL_SERVICE_URL:-http://127.0.0.1:8000/retrieve}"
 RETRIEVAL_TOPK="${RETRIEVAL_TOPK:-20}"
 RETRIEVAL_TIMEOUT="${RETRIEVAL_TIMEOUT:-30}"
 
-# ACI 基座模型（用于生成 initial_scores.pt）
+# ACI base model used to generate initial_scores.pt.
 BASE_MODEL="${BASE_MODEL:-Qwen/Qwen3-8B}"
 TORCH_DTYPE="${TORCH_DTYPE:-bfloat16}"
 DEVICE_MAP="${DEVICE_MAP:-auto}"
 
-# 校准超参数（可按需覆盖）
+# Calibration hyperparameters; override them as needed.
 CALIB_SAMPLE_SIZE="${CALIB_SAMPLE_SIZE:-150}"
 CP_ALPHA="${CP_ALPHA:-0.20}"
 CP_K_MAX="${CP_K_MAX:-10}"
@@ -37,17 +37,17 @@ APS_MIN_DOCS="${APS_MIN_DOCS:-2}"
 APS_MAX_DOCS="${APS_MAX_DOCS:-5}"
 SEED="${SEED:-42}"
 
-# Hotpot 轨迹缺失时需要 teacher-LLM 补 hop；默认启用
+# Use a teacher LLM to recover missing Hotpot hops; enabled by default.
 LLM_API_BASE="${LLM_API_BASE:-https://api.deepseek.com}"
 LLM_MODEL="${LLM_MODEL:-deepseek-chat}"
 LLM_TIMEOUT="${LLM_TIMEOUT:-60}"
 LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.0}"
 LLM_API_KEY_ENV="${LLM_API_KEY_ENV:-OPENAI_API_KEY}"
 
-# 明确检查 API Key，避免运行到中途失败
+# Validate the API key before starting the pipeline.
 if [[ -z "${!LLM_API_KEY_ENV:-}" ]]; then
-  echo "[ERROR] 环境变量 ${LLM_API_KEY_ENV} 未设置，无法进行 --enable_llm_hop_extraction。"
-  echo "请先执行：export ${LLM_API_KEY_ENV}=<your_api_key>"
+  echo "[ERROR] Environment variable ${LLM_API_KEY_ENV} is not set; --enable_llm_hop_extraction cannot run."
+  echo "Set it first: export ${LLM_API_KEY_ENV}=<your_api_key>"
   exit 1
 fi
 
@@ -78,7 +78,7 @@ python3 "${PROJECT_DIR}/scripts/prepare_calibration.py" \
   --device_map "${DEVICE_MAP}" \
   "$@"
 
-echo "==== ACI 产物检查 ===="
+echo "==== ACI output check ===="
 ls -lh "${OUTPUT_DIR}/calibration_dataset.parquet" \
        "${OUTPUT_DIR}/rl_train_dataset.parquet" \
        "${OUTPUT_DIR}/lambda_fixed.json" \
