@@ -1,7 +1,8 @@
 # CAS: Conformalized Agentic Search via Adaptive Retrieval and Policy Weighting
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
+[![Training Python](https://img.shields.io/badge/Training%20Python-3.12%2B-blue.svg)](https://www.python.org/)
+[![Retrieval Python](https://img.shields.io/badge/Retrieval%20Python-3.10-blue.svg)](https://www.python.org/)
 [![Based on Ferret](https://img.shields.io/badge/Based%20on-Ferret-orange.svg)](https://github.com/Tree-Shu-Zhao/ferret)
 
 Official implementation of **CAS**, built on [VERL](https://github.com/volcengine/verl).
