@@ -134,18 +134,6 @@ bash recipe/cas/train_cas_grpo_qwen2.5-3b-instruct.sh \
 
 Checkpoints are written to `checkpoints/CAS/`.
 
-## Evaluation
-
-```bash
-ENABLE_APS=1 bash recipe/cas/prompt_eval_cas_qwen2.5-3b-instruct.sh
-```
-
-For SGLang/VERL evaluation:
-
-```bash
-ENABLE_APS=1 bash recipe/cas/sglang_eval_cas_qwen2.5-3b-instruct.sh
-```
-
 ## Acknowledgements
 
 CAS is developed from [Ferret](https://github.com/Tree-Shu-Zhao/ferret) and implemented on top of [VERL](https://github.com/volcengine/verl). We thank the authors and contributors of both projects.
